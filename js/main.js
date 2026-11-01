@@ -1,6 +1,6 @@
 import { listMovies, listCategories, ApiError } from "./api.js";
-import { isLoggedIn, clearSession } from "./auth.js";
 import { config } from "./config.js";
+import { errorText, formatRating, setYear, setupAuthLink } from "./utils.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -19,12 +19,6 @@ const els = {
 let allMovies = [];
 let visibleCount = config.pageSize;
 
-function errorText(err) {
-  return err instanceof ApiError
-    ? err.message
-    : "No se pudo completar la acción. Intenta de nuevo.";
-}
-
 function showMessage(container, text) {
   const div = document.createElement("div");
   div.className = "loading-state";
@@ -32,7 +26,7 @@ function showMessage(container, text) {
   container.replaceChildren(div);
 }
 
-// Tarjeta de película. Todo el texto se asigna con textContent, nunca con innerHTML
+// Movie card. All text goes through textContent, never innerHTML
 function posterCard(movie) {
   const article = document.createElement("article");
   article.className = "poster-card";
@@ -49,7 +43,7 @@ function posterCard(movie) {
     img.src = movie.image_url;
     img.alt = movie.movie_name;
     img.loading = "lazy";
-    // Si la imagen no carga, se muestra la inicial en su lugar
+    // If the image fails to load, show the initial instead
     img.onerror = () => art.replaceChildren(initial);
     art.append(img);
   } else {
@@ -60,15 +54,15 @@ function posterCard(movie) {
   title.textContent = movie.movie_name;
 
   const meta = document.createElement("p");
-  const rating = movie.average !== null ? `★ ${movie.average}` : "Sin calificar";
-  meta.textContent = `${movie.release_year} · ${rating}`;
+  const rating = formatRating(movie.average_rating, movie.rating_count);
+  meta.textContent = `${movie.release_year} · ${rating ? `★ ${rating}` : "Sin calificar"}`;
 
   link.append(art, title, meta);
   article.append(link);
   return article;
 }
 
-// Ranking: las 5 mejores según el ranking ponderado del backend
+// Top 5 by the backend's weighted ranking
 async function loadRanking() {
   showMessage(els.rankingList, "Cargando selección…");
   try {
@@ -84,12 +78,10 @@ async function loadRanking() {
   }
 }
 
-// Filtra por texto en el navegador y pagina con "Cargar más"
+// Text search runs in the browser over the loaded list; pagination with "Cargar más"
 function renderCatalog() {
   const term = els.search.value.trim().toLowerCase();
-  const matches = allMovies.filter((m) =>
-    m.movie_name.toLowerCase().includes(term)
-  );
+  const matches = allMovies.filter((m) => m.movie_name.toLowerCase().includes(term));
 
   els.count.textContent = `${matches.length} ${matches.length === 1 ? "título" : "títulos"}`;
   els.empty.classList.toggle("hidden", matches.length > 0);
@@ -108,7 +100,7 @@ function setStat(name, value) {
   if (el) el.textContent = value.toLocaleString("es");
 }
 
-// Catálogo: se vuelve a pedir al backend cuando cambian categoría u orden
+// The catalog is requested again from the backend when category or sort changes
 async function loadCatalog() {
   visibleCount = config.pageSize;
   showMessage(els.grid, "Preparando el archivo…");
@@ -118,8 +110,7 @@ async function loadCatalog() {
       categoryId: els.category.value || undefined,
       sort: els.sort.value,
     });
-
-    // Las estadísticas del hero reflejan el catálogo completo, no un filtro
+    // Hero stats reflect the full catalog, not a filtered view
     if (!els.category.value) updateStats();
     renderCatalog();
   } catch (err) {
@@ -136,22 +127,8 @@ async function loadCategories() {
     const options = categories.map((c) => new Option(c.category_name, c.id));
     els.category.replaceChildren(new Option("Todas las categorías", ""), ...options);
   } catch {
-    // Sin categorías el listado sigue funcionando, solo sin ese filtro
+    // Without categories the list still works, just without the filter
   }
-}
-
-// Si hay sesión, el enlace del encabezado pasa a cerrar sesión
-function setupAuthLink() {
-  const link = document.querySelector("[data-auth-link]");
-  if (!link || !isLoggedIn()) return;
-
-  link.textContent = "Cerrar sesión";
-  link.href = "#";
-  link.addEventListener("click", (event) => {
-    event.preventDefault();
-    clearSession();
-    location.reload();
-  });
 }
 
 els.form.addEventListener("submit", (event) => event.preventDefault());
@@ -163,10 +140,7 @@ els.loadMore.addEventListener("click", () => {
   renderCatalog();
 });
 
-document.querySelectorAll("[data-year]").forEach((el) => {
-  el.textContent = new Date().getFullYear();
-});
-
+setYear();
 setupAuthLink();
 loadCategories();
 loadRanking();

@@ -1,24 +1,36 @@
 import { config } from "./config.js";
 
-const USER_KEY = "cmdb_user";
-
+// Single source of truth for the session (token + public user returned by /auth/login)
 export function saveSession({ token, user }) {
-  localStorage.setItem(config.tokenKey, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (!token) throw new Error("La API no devolvió un token de sesión.");
+  try {
+    localStorage.setItem(config.tokenKey, token);
+    localStorage.setItem(config.userKey, JSON.stringify(user));
+  } catch {
+    throw new Error("El navegador no permite guardar la sesión. Habilita el almacenamiento local e inténtalo de nuevo.");
+  }
 }
 
 export function clearSession() {
-  localStorage.removeItem(config.tokenKey);
-  localStorage.removeItem(USER_KEY);
+  try {
+    localStorage.removeItem(config.tokenKey);
+    localStorage.removeItem(config.userKey);
+  } catch {
+    /* storage unavailable: nothing to clear */
+  }
 }
 
 export function getToken() {
-  return localStorage.getItem(config.tokenKey);
+  try {
+    return localStorage.getItem(config.tokenKey);
+  } catch {
+    return null;
+  }
 }
 
 export function getUser() {
   try {
-    return JSON.parse(localStorage.getItem(USER_KEY));
+    return JSON.parse(localStorage.getItem(config.userKey));
   } catch {
     return null;
   }
@@ -29,6 +41,18 @@ export function isLoggedIn() {
 }
 
 export function isAdmin() {
-  const user = getUser();
-  return Boolean(user && (user.role === "admin" || user.administrator === true));
+  return Boolean(getUser()?.administrator);
+}
+
+export function requireAdmin() {
+  if (!isAdmin()) {
+    location.replace("./login.html");
+    return false;
+  }
+  return true;
+}
+
+export function logout() {
+  clearSession();
+  location.assign("./index.html");
 }

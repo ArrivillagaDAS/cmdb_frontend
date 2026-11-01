@@ -10,6 +10,8 @@ export class ApiError extends Error {
   }
 }
 
+// Every backend response has the shape { success, data } on success
+// and { success: false, status, message, errors } on failure.
 async function request(path, { method = "GET", body, auth = true } = {}) {
   const token = auth ? getToken() : null;
   const headers = {};
@@ -25,7 +27,6 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      credentials: config.credentials,
       signal: controller.signal,
     });
   } catch (err) {
@@ -41,7 +42,7 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 
   const payload = await res.json().catch(() => null);
 
-  // Token vencido o inválido: se borra la sesión local
+  // Expired or invalid token: drop the local session
   if (res.status === 401 && token) clearSession();
 
   if (!res.ok || payload?.success === false) {
@@ -55,29 +56,31 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   return payload?.data ?? null;
 }
 
-// Autenticación
+// Auth
 export const register = (data) =>
   request("/auth/register", { method: "POST", body: data, auth: false });
 
 export const login = (credentials) =>
   request("/auth/login", { method: "POST", body: credentials, auth: false });
 
-// Categorías
+export const getCurrentUser = () => request("/auth/me");
+
+// Categories
 export const listCategories = () => request("/categories", { auth: false });
 
-export const createCategory = (name) =>
-  request("/categories", { method: "POST", body: { category_name: name } });
+export const createCategory = (categoryName) =>
+  request("/categories", { method: "POST", body: { categoryName } });
 
-export const updateCategory = (id, name) =>
-  request(`/categories/${id}`, { method: "PUT", body: { category_name: name } });
+export const updateCategory = (id, categoryName) =>
+  request(`/categories/${id}`, { method: "PUT", body: { categoryName } });
 
 export const deleteCategory = (id) =>
   request(`/categories/${id}`, { method: "DELETE" });
 
-// Películas
+// Movies
 export function listMovies({ categoryId, sort } = {}) {
   const params = new URLSearchParams();
-  if (categoryId) params.set("category_id", categoryId);
+  if (categoryId) params.set("categoryId", categoryId);
   if (sort) params.set("sort", sort);
   const query = params.toString();
   return request(`/movies${query ? `?${query}` : ""}`, { auth: false });
@@ -88,18 +91,26 @@ export const getMovie = (id) => request(`/movies/${id}`);
 export const createMovie = (data) =>
   request("/movies", { method: "POST", body: data });
 
+export const updateMovie = (id, data) =>
+  request(`/movies/${id}`, { method: "PUT", body: data });
+
+export const deleteMovie = (id) =>
+  request(`/movies/${id}`, { method: "DELETE" });
+
+export const listPendingMovies = () => request("/movies/pending");
+
 export const approveMovie = (id) =>
   request(`/movies/${id}/approve`, { method: "PATCH" });
 
-// Reseñas y reacciones
-export const createReview = (movieId, data) =>
-  request(`/movies/${movieId}/reviews`, { method: "POST", body: data });
-
-export const updateReview = (id, data) =>
-  request(`/reviews/${id}`, { method: "PUT", body: data });
+// Reviews and reactions
+export const createReview = ({ movieId, title, comment, rating }) =>
+  request("/reviews", { method: "POST", body: { movieId, title, comment, rating } });
 
 export const deleteReview = (id) =>
   request(`/reviews/${id}`, { method: "DELETE" });
 
-export const reactToReview = (id, reaction) =>
-  request(`/reviews/${id}/reactions`, { method: "POST", body: { reaction } });
+export const setReaction = (reviewId, reaction) =>
+  request(`/reviews/${reviewId}/reaction`, { method: "PUT", body: { reaction } });
+
+export const removeReaction = (reviewId) =>
+  request(`/reviews/${reviewId}/reaction`, { method: "DELETE" });

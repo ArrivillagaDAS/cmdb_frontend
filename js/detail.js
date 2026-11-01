@@ -1,225 +1,151 @@
-import { api, unwrapList } from "./api.js";
-import { config } from "./config.js";
+import { getMovie, createReview, deleteReview, setReaction, ApiError } from "./api.js";
+import { getToken, getUser } from "./auth.js";
 import {
-  $,
-  backdropUrl,
-  escapeHtml,
-  formatRating,
-  posterUrl,
-  renderError,
-  setBusy,
-  setYear,
-  showAlert,
-  titleName,
-  titleRating,
-  titleType,
+  $, clearAlert, errorText, escapeHtml, formatDate, formatRating,
+  setBusy, setYear, setupAuthLink, showAlert, showFieldErrors,
 } from "./utils.js";
-import { getToken } from "./session.js";
 
-const id = new URLSearchParams(location.search).get("id");
+const movieId = new URLSearchParams(location.search).get("id");
+const reviewForm = $("#review-form");
+const reviewAlert = $("#review-alert");
 
-function renderDetail(item) {
-  const poster = posterUrl(item, config.tmdbDetailPosterSize);
-  const backdrop = backdropUrl(item);
-  const genres = Array.isArray(item.genres)
-    ? item.genres
-    : String(item.genres ?? "")
-        .split(",")
-        .map((g) => g.trim())
-        .filter(Boolean);
-  const element = $("#detail-content");
-  const posterMarkup = poster
-    ? `<img
-        class="detail-poster"
-        src="${escapeHtml(poster)}"
-        alt="Póster de ${escapeHtml(titleName(item))}"
-      />`
-    : `<div class="detail-poster poster-placeholder">
-        ${escapeHtml(titleName(item))}
-      </div>`;
+function renderDetail(movie) {
+  const rating = formatRating(movie.average_rating, movie.rating_count);
+  const names = (items, key) => (items ?? []).map((item) => escapeHtml(item[key])).join(", ");
+  const poster = movie.image_url
+    ? `<img class="detail-poster" src="${escapeHtml(movie.image_url)}" alt="Póster de ${escapeHtml(movie.movie_name)}" />`
+    : `<div class="detail-poster poster-placeholder">${escapeHtml(movie.movie_name)}</div>`;
 
-  element.innerHTML = `
+  $("#detail-content").innerHTML = `
     <section class="detail-hero">
-      ${backdrop ? `<img class="detail-backdrop" src="${escapeHtml(backdrop)}" alt="" />` : ""}
-      <div>${posterMarkup}</div>
+      <div>${poster}</div>
       <div class="detail-info">
-        <p class="eyebrow">${escapeHtml(titleType(item))} · ARCHIVO CMDB</p>
-        <h1>${escapeHtml(titleName(item))}</h1>
+        <p class="eyebrow">ARCHIVO CMDB</p>
+        <h1>${escapeHtml(movie.movie_name)}</h1>
         <div class="detail-meta">
-          <span class="detail-score">★ ${formatRating(titleRating(item))}</span>
-          <span>${item.releaseYear ? escapeHtml(item.releaseYear) : "Año desconocido"}</span>
-          <span>${Number(item.reviewCount ?? 0)} reseñas</span>
+          <span class="detail-score">★ ${rating ?? "Sin calificar"}</span>
+          <span>${escapeHtml(movie.release_year)}</span>
+          ${movie.runtime ? `<span>${escapeHtml(movie.runtime)} min</span>` : ""}
+          <span>${Number(movie.rating_count)} calificaciones</span>
         </div>
-        <p class="detail-synopsis">
-          ${escapeHtml(item.synopsis ?? "Esta historia aún no tiene sinopsis.")}
-        </p>
+        <p class="detail-synopsis">${escapeHtml(movie.overview)}</p>
         <div class="detail-genres">
-          ${genres.map((genre) => `<span>${escapeHtml(genre)}</span>`).join("")}
+          ${(movie.categories ?? []).map((c) => `<span>${escapeHtml(c.category_name)}</span>`).join("")}
         </div>
+        ${names(movie.directors, "director_name") ? `<p><strong>Dirección:</strong> ${names(movie.directors, "director_name")}</p>` : ""}
+        ${names(movie.actors, "actor_name") ? `<p><strong>Reparto:</strong> ${names(movie.actors, "actor_name")}</p>` : ""}
       </div>
     </section>
   `;
-  document.title = `${titleName(item)} — CMDB`;
+  document.title = `${movie.movie_name} — CMDB`;
 }
 
-function renderReviews(items) {
-  const list = $("#review-list");
-  $("#review-count").textContent = `${items.length} reseñas`;
-  if (!items.length) {
-    list.innerHTML =
-      '<p class="loading-state">Aún no hay reseñas. Sé la primera persona en compartir su mirada.</p>';
-    return;
-  }
-  list.innerHTML = items
-    .map((review) => {
-      const votes = review.votes ?? {};
-      const liked = review.myVote === "like";
-      const disliked = review.myVote === "dislike";
-      const numericRating = Number(review.rating);
-      const safeRating = Number.isFinite(numericRating)
-        ? Math.min(5, Math.max(0, Math.round(numericRating)))
-        : 0;
-      return `
-        <article class="review-card" data-review-id="${escapeHtml(review.id)}">
-          <div class="review-card-head">
-            <div>
-              <span class="review-author">
-                ${escapeHtml(review.user?.name ?? review.authorName ?? "Miembro CMDB")}
-              </span>
-              <span class="review-date">
-                · ${escapeHtml(review.createdAt ? new Date(review.createdAt).toLocaleDateString("es") : "")}
-              </span>
-            </div>
-            <span class="review-stars" aria-label="${safeRating} de 5">
-              ${"★".repeat(safeRating)}${"☆".repeat(5 - safeRating)}
-            </span>
-          </div>
-          <p class="review-body">
-            ${escapeHtml(review.body ?? review.content ?? "")}
-          </p>
-          <div class="review-actions">
-            <button
-              class="vote-button ${liked ? "active" : ""}"
-              data-vote="like"
-              ${getToken() ? "" : "disabled"}
-              aria-label="Me gusta"
-            >
-              ↑ ${Number(votes.likes ?? review.likes ?? 0)}
-            </button>
-            <button
-              class="vote-button ${disliked ? "active" : ""}"
-              data-vote="dislike"
-              ${getToken() ? "" : "disabled"}
-              aria-label="No me gusta"
-            >
-              ↓ ${Number(votes.dislikes ?? review.dislikes ?? 0)}
-            </button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+function reviewCard(review, me) {
+  const own = Boolean(me) && Number(me.id) === Number(review.user_id);
+  const canVote = Boolean(getToken()) && !own;
+  return `
+    <article class="review-card" data-review-id="${review.id}">
+      <div class="review-card-head">
+        <div>
+          <span class="review-author">${escapeHtml(review.username)}</span>
+          <span class="review-date"> · ${escapeHtml(formatDate(review.created_at))}</span>
+        </div>
+        <span class="review-stars">★ ${Number(review.rating)}/10</span>
+      </div>
+      <h4>${escapeHtml(review.title)}</h4>
+      <p class="review-body">${escapeHtml(review.comment)}</p>
+      <div class="review-actions">
+        <button class="vote-button" data-action="like" ${canVote ? "" : "disabled"}>↑ ${Number(review.likes)}</button>
+        <button class="vote-button" data-action="dislike" ${canVote ? "" : "disabled"}>↓ ${Number(review.dislikes)}</button>
+        ${own ? '<button class="button button-danger" data-action="delete">Eliminar mi reseña</button>' : ""}
+      </div>
+    </article>`;
 }
 
-async function loadReviews() {
-  const result = await api.reviews.list(id, { status: "approved" });
-  renderReviews(unwrapList(result).items);
+function renderReviews(reviews) {
+  const me = getUser();
+  $("#review-count").textContent = `${reviews.length} reseñas`;
+  $("#review-list").innerHTML = reviews.length
+    ? reviews.map((review) => reviewCard(review, me)).join("")
+    : '<p class="loading-state">Aún no hay reseñas. Sé la primera persona en compartir su mirada.</p>';
+}
+
+// Fetches the movie (with its reviews) and renders both
+async function loadMovie() {
+  const movie = await getMovie(movieId);
+  renderDetail(movie);
+  renderReviews(movie.reviews ?? []);
 }
 
 async function init() {
   setYear();
-  const reviewForm = $("#review-form");
-  if (!id) {
-    renderError(
-      $("#detail-content"),
-      "Falta el identificador del título en la dirección.",
-    );
+  setupAuthLink();
+
+  if (!movieId) {
+    $("#detail-content").innerHTML = `<p class="loading-state">Falta el identificador de la película en la dirección.</p>`;
     reviewForm.classList.add("hidden");
     return;
   }
+
   if (!getToken()) {
-    reviewForm
-      .querySelector("h3")
-      .insertAdjacentHTML(
-        "afterend",
-        '<p class="form-footnote">Para publicar una reseña, <a class="text-link" href="/html/login.html">inicia sesión</a>.</p>',
-      );
-  }
-  try {
-    const title = await api.titles.get(id);
-    renderDetail(title);
-  } catch (error) {
-    renderError($("#detail-content"), error.message);
     reviewForm.classList.add("hidden");
+    $("#review-login").classList.remove("hidden");
   }
+
   try {
-    await loadReviews();
-  } catch (error) {
-    renderError($("#review-list"), error.message);
+    await loadMovie();
+  } catch (err) {
+    $("#detail-content").innerHTML = `<p class="loading-state">${escapeHtml(errorText(err))}</p>`;
+    reviewForm.classList.add("hidden");
   }
 
   reviewForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const alert = $("#review-alert");
-    alert.classList.add("hidden");
-    if (!getToken()) {
-      showAlert(alert, "Inicia sesión antes de enviar una reseña.");
-      return;
-    }
+    clearAlert(reviewAlert);
+    showFieldErrors(reviewForm, []);
+
     const data = Object.fromEntries(new FormData(reviewForm));
-    if (!data.rating || data.body.trim().length < 20) {
-      showAlert(
-        alert,
-        "Elige una calificación y escribe al menos 20 caracteres.",
-      );
-      return;
-    }
     const button = reviewForm.querySelector('button[type="submit"]');
     setBusy(button, true);
     try {
-      await api.reviews.create(id, {
+      await createReview({
+        movieId: Number(movieId),
+        title: data.title.trim(),
+        comment: data.comment.trim(),
         rating: Number(data.rating),
-        body: data.body.trim(),
       });
       reviewForm.reset();
-      showAlert(
-        alert,
-        "Reseña enviada. Aparecerá cuando el equipo la apruebe.",
-        true,
-      );
-    } catch (error) {
-      showAlert(alert, error.message);
+      showAlert(reviewAlert, "Reseña publicada.", "success");
+      await loadMovie();
+    } catch (err) {
+      if (err instanceof ApiError) showFieldErrors(reviewForm, err.errors);
+      showAlert(reviewAlert, errorText(err));
     } finally {
       setBusy(button, false);
     }
   });
 
+  // Review actions: like/dislike on other people's reviews, delete your own
   $("#review-list").addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-vote]");
-    if (!button) {
-      return;
-    }
-    if (!getToken()) {
-      location.assign("/html/login.html");
-      return;
-    }
-    button.disabled = true;
+    const button = event.target.closest("[data-action]");
+    if (!button || button.disabled) return;
+    const reviewId = button.closest("[data-review-id]").dataset.reviewId;
+    clearAlert(reviewAlert);
+    setBusy(button, true);
     try {
-      await api.reviews.vote(
-        button.closest("[data-review-id]").dataset.reviewId,
-        button.dataset.vote,
-      );
-      await loadReviews();
-    } catch (error) {
-      showAlert($("#review-alert"), error.message);
+      if (button.dataset.action === "delete") {
+        if (!window.confirm("¿Eliminar tu reseña?")) return;
+        await deleteReview(reviewId);
+      } else {
+        await setReaction(reviewId, button.dataset.action);
+      }
+      await loadMovie();
+    } catch (err) {
+      showAlert(reviewAlert, errorText(err));
     } finally {
-      button.disabled = false;
+      setBusy(button, false);
     }
   });
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
+init();

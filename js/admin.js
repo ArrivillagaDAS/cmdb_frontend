@@ -1,251 +1,147 @@
-import { api, unwrapList } from "./api.js";
-import { requireAdmin } from "./session.js";
-requireAdmin();
 import {
-  $,
-  $$,
-  clearAlert,
-  escapeHtml,
-  formatRating,
-  requireAdmin,
-  setBusy,
-  setYear,
-  showAlert,
-  titleName,
-  titleRating,
-  titleType,
-} from "./utils.js";
-import { logout } from "./session.js";
+  approveMovie, createCategory, deleteCategory, deleteMovie,
+  listCategories, listPendingMovies, updateCategory, ApiError,
+} from "./api.js";
+import { logout, requireAdmin } from "./auth.js";
+import { $, $$, clearAlert, errorText, escapeHtml, formatDate, setBusy, setYear, showAlert } from "./utils.js";
 
-function reviewCard(review) {
+if (requireAdmin()) init();
+
+const alertBox = () => $("#admin-alert");
+
+// Pending movies (admin approval)
+function pendingCard(movie) {
   return `
-    <article class="admin-card" data-id="${escapeHtml(review.id)}">
+    <article class="admin-card" data-id="${movie.id}">
       <div>
-        <h3>${escapeHtml(review.title?.title ?? review.titleName ?? "Reseña")}</h3>
-        <p>“${escapeHtml(review.body ?? review.content ?? "")}”</p>
-        <span class="admin-card-meta">
-          ${escapeHtml(review.user?.name ?? review.authorName ?? "Miembro")}
-          · ${Number(review.rating)}/5
-          · ${escapeHtml(review.createdAt ? new Date(review.createdAt).toLocaleDateString("es") : "")}
-        </span>
+        <h3>${escapeHtml(movie.movie_name)}</h3>
+        <p>${escapeHtml(movie.release_year)} · ${escapeHtml(movie.overview)}</p>
+        <span class="admin-card-meta">Propuesta #${movie.id} · ${escapeHtml(formatDate(movie.created_at))}</span>
       </div>
       <div class="admin-card-actions">
         <button class="button button-primary" data-action="approve">Aprobar</button>
-        <button class="button button-danger" data-action="reject">Rechazar</button>
-      </div>
-    </article>
-  `;
-}
-
-function titleRow(title) {
-  const publishButton =
-    title.status === "pending"
-      ? '<button class="button button-primary" data-action="publish">Publicar</button>'
-      : "";
-
-  return `
-    <article class="admin-card" data-id="${escapeHtml(title.id)}">
-      <div>
-        <h3>${escapeHtml(titleName(title))}</h3>
-        <p>
-          ${escapeHtml(titleType(title))}
-          · ${escapeHtml(title.releaseYear ?? "Año desconocido")}
-          · ★ ${formatRating(titleRating(title))}
-        </p>
-        <span class="admin-card-meta">
-          ${escapeHtml((title.genres ?? []).join?.(", ") ?? title.genres ?? "")}
-          ${title.status === "pending" ? "· Pendiente de publicación" : ""}
-        </span>
-      </div>
-      <div class="admin-card-actions">
-        <button class="button button-quiet" data-action="edit">Editar</button>
-        ${publishButton}
         <button class="button button-danger" data-action="delete">Eliminar</button>
       </div>
-    </article>
-  `;
+    </article>`;
 }
 
-async function loadReviews() {
-  const container = $("#pending-reviews");
+async function loadPending() {
+  const box = $("#pending-list");
+  box.innerHTML = '<p class="loading-state">Cargando propuestas…</p>';
   try {
-    const result = await api.reviews.pending();
-    const items = unwrapList(result).items;
-    container.innerHTML =
-      items.map(reviewCard).join("") ||
-      '<p class="loading-state">No hay reseñas pendientes de aprobación.</p>';
-    $("#pending-count").textContent = `${items.length} pendientes`;
-  } catch (error) {
-    container.innerHTML = `<p class="loading-state">${escapeHtml(error.message)}</p>`;
+    const movies = await listPendingMovies();
+    $("#pending-count").textContent = `${movies.length} pendientes`;
+    box.innerHTML = movies.length
+      ? movies.map(pendingCard).join("")
+      : '<p class="loading-state">No hay películas pendientes de aprobación.</p>';
+  } catch (err) {
+    box.innerHTML = `<p class="loading-state">${escapeHtml(errorText(err))}</p>`;
   }
 }
 
-async function loadTitles() {
-  const container = $("#title-list");
+// Categories (admin CRUD)
+function categoryRow(category) {
+  return `
+    <article class="admin-card" data-id="${category.id}">
+      <div class="admin-category-edit">
+        <input name="categoryName" value="${escapeHtml(category.category_name)}" maxlength="80" aria-label="Nombre de la categoría" />
+      </div>
+      <div class="admin-card-actions">
+        <button class="button button-quiet" data-action="save">Guardar</button>
+        <button class="button button-danger" data-action="delete">Eliminar</button>
+      </div>
+    </article>`;
+}
+
+async function loadCategories() {
+  const box = $("#category-list");
+  box.innerHTML = '<p class="loading-state">Cargando categorías…</p>';
   try {
-    const result = await api.titles.list(
-      { limit: 100, includePending: true },
-      { auth: true },
-    );
-    const items = unwrapList(result).items;
-    container.innerHTML =
-      items.map(titleRow).join("") ||
-      '<p class="loading-state">El catálogo está vacío.</p>';
-  } catch (error) {
-    container.innerHTML = `<p class="loading-state">${escapeHtml(error.message)}</p>`;
+    const categories = await listCategories();
+    box.innerHTML = categories.length
+      ? categories.map(categoryRow).join("")
+      : '<p class="loading-state">Aún no hay categorías.</p>';
+  } catch (err) {
+    box.innerHTML = `<p class="loading-state">${escapeHtml(errorText(err))}</p>`;
+  }
+}
+
+async function run(button, action) {
+  clearAlert(alertBox());
+  setBusy(button, true);
+  try {
+    await action();
+  } catch (err) {
+    // 409 from the backend means the row is still referenced (e.g. category used by movies)
+    const message = err instanceof ApiError && err.status === 409
+      ? "No se puede eliminar: el elemento todavía está en uso."
+      : errorText(err);
+    showAlert(alertBox(), message);
+  } finally {
+    setBusy(button, false);
   }
 }
 
 function initTabs() {
   $$(".admin-tab").forEach((tab) =>
     tab.addEventListener("click", () => {
-      $$(".admin-tab").forEach((item) =>
-        item.classList.toggle("active", item === tab),
-      );
-      $("#admin-reviews").classList.toggle(
-        "hidden",
-        tab.dataset.adminTab !== "reviews",
-      );
-      $("#admin-titles").classList.toggle(
-        "hidden",
-        tab.dataset.adminTab !== "titles",
-      );
+      $$(".admin-tab").forEach((item) => item.classList.toggle("active", item === tab));
+      $("#admin-pending").classList.toggle("hidden", tab.dataset.adminTab !== "pending");
+      $("#admin-categories").classList.toggle("hidden", tab.dataset.adminTab !== "categories");
     }),
   );
 }
 
-function initModeration() {
-  $("#pending-reviews").addEventListener("click", async (event) => {
+function initActions() {
+  $("#pending-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-action]");
-    if (!button) {
-      return;
-    }
-    const card = button.closest("[data-id]");
-    const action = button.dataset.action;
-    setBusy(button, true);
-    try {
-      await api.reviews.moderate(
-        card.dataset.id,
-        action === "approve" ? "approved" : "rejected",
-      );
-      card.remove();
-      await loadReviews();
-    } catch (error) {
-      showAlert($("#admin-alert"), error.message);
-    } finally {
-      setBusy(button, false);
-    }
-  });
-
-  $("#title-list").addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-action]");
-    if (!button) {
-      return;
-    }
-    const card = button.closest("[data-id]");
-    setBusy(button, true);
-    try {
-      if (button.dataset.action === "edit") {
-        const title = await api.titles.get(card.dataset.id, { auth: true });
-        const form = $("#title-form");
-        form.elements.id.value = title.id;
-        form.elements.title.value = title.title ?? title.name ?? "";
-        form.elements.type.value = title.type ?? "movie";
-        form.elements.synopsis.value = title.synopsis ?? "";
-        form.elements.tmdbId.value = title.tmdbId ?? "";
-        form.elements.releaseYear.value = title.releaseYear ?? "";
-        form.elements.genres.value = Array.isArray(title.genres)
-          ? title.genres.join(", ")
-          : (title.genres ?? "");
-        $("#title-modal-heading").innerHTML = "Editar <em>título</em>";
-        $("#title-modal").showModal();
-      } else if (button.dataset.action === "delete") {
-        if (!window.confirm("¿Eliminar este título del catálogo?")) {
-          return;
-        }
-        await api.titles.remove(card.dataset.id);
-      } else if (button.dataset.action === "publish") {
-        await api.titles.update(card.dataset.id, { status: "published" });
-      }
-      await loadTitles();
-    } catch (error) {
-      showAlert($("#admin-alert"), error.message);
-    } finally {
-      setBusy(button, false);
-    }
-  });
-}
-
-function initTitleModal() {
-  const modal = $("#title-modal");
-  const form = $("#title-form");
-  $("#new-title").addEventListener("click", () => {
-    form.reset();
-    form.elements.id.value = "";
-    $("#title-modal-heading").innerHTML = "Nuevo <em>título</em>";
-    modal.showModal();
-  });
-  $$("[data-close-modal]", modal).forEach((button) =>
-    button.addEventListener("click", () => modal.close()),
-  );
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    clearAlert($("#title-alert"));
-    const data = Object.fromEntries(new FormData(form));
-    if (!data.title.trim()) {
-      showAlert($("#title-alert"), "El título es obligatorio.");
-      return;
-    }
-    const button = $('button[type="submit"]', form);
-    setBusy(button, true);
-    try {
-      const payload = {
-        title: data.title.trim(),
-        type: data.type,
-        synopsis: data.synopsis.trim(),
-        tmdbId: data.tmdbId ? Number(data.tmdbId) : null,
-        releaseYear: data.releaseYear ? Number(data.releaseYear) : null,
-        genres: data.genres
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-      };
-      if (data.id) {
-        await api.titles.update(data.id, payload);
+    if (!button) return;
+    const id = button.closest("[data-id]").dataset.id;
+    run(button, async () => {
+      if (button.dataset.action === "approve") {
+        await approveMovie(id);
       } else {
-        await api.titles.create(payload);
+        if (!window.confirm("¿Eliminar esta propuesta?")) return;
+        await deleteMovie(id);
       }
+      await loadPending();
+    });
+  });
+
+  $("#category-list").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const card = button.closest("[data-id]");
+    run(button, async () => {
+      if (button.dataset.action === "save") {
+        const name = card.querySelector("input").value.trim();
+        await updateCategory(card.dataset.id, name);
+      } else {
+        if (!window.confirm("¿Eliminar esta categoría?")) return;
+        await deleteCategory(card.dataset.id);
+      }
+      await loadCategories();
+    });
+  });
+
+  const form = $("#category-form");
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button[type="submit"]');
+    const name = form.elements.categoryName.value.trim();
+    run(button, async () => {
+      await createCategory(name);
       form.reset();
-      modal.close();
-      await loadTitles();
-      showAlert($("#admin-alert"), "Título añadido al archivo.", true);
-    } catch (error) {
-      showAlert($("#title-alert"), error.message);
-    } finally {
-      setBusy(button, false);
-    }
+      await loadCategories();
+    });
   });
 }
 
-async function init() {
+function init() {
   setYear();
-  if (!(await requireAdmin())) {
-    return;
-  }
-  $("#logout-button").addEventListener("click", async () => {
-    try {
-      await api.auth.logout();
-    } catch {}
-    logout();
-  });
+  $("#logout-button").addEventListener("click", logout);
   initTabs();
-  initModeration();
-  initTitleModal();
-  await Promise.all([loadReviews(), loadTitles()]);
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
+  initActions();
+  loadPending();
+  loadCategories();
 }
