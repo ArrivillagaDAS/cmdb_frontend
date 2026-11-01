@@ -1,4 +1,4 @@
-# 🎬 CMDB — Carlos Movies Data Base (Backend API)
+# CMDB — Carlos Movies Data Base (Backend API)
 
 ![Node.js](https://img.shields.io/badge/Node.js-v18+-green?style=flat-square&logo=node.js)
 ![Express](https://img.shields.io/badge/Express-4.x-black?style=flat-square&logo=express)
@@ -6,7 +6,7 @@
 ![JWT](https://img.shields.io/badge/Auth-JWT-red?style=flat-square&logo=json-web-tokens)
 ![SemVer](https://img.shields.io/badge/SemVer-2.0.0-orange?style=flat-square)
 
-## 📌 Project Overview & Theme
+## Project Overview & Theme
 **CMDB (Carlos Movies Data Base)** is a high-performance RESTful API built for a full-stack web application designed for film, series, and anime enthusiasts. The platform allows users to explore catalog items, rate titles, publish detailed reviews, and engage with community feedback via like/dislike interactions.
 
 The architecture emphasizes security, transactional consistency, dynamic rating calculations, and role-based authorization (User vs. Administrator).
@@ -20,7 +20,7 @@ The architecture emphasizes security, transactional consistency, dynamic rating 
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Core Technologies
 - **Runtime Environment:** Node.js
@@ -41,14 +41,14 @@ The architecture emphasizes security, transactional consistency, dynamic rating 
 
 ---
 
-## 🔗 Connected Repositories
+## Connected Repositories
 
 - **Backend Repository:** [danielAVAR/cmdb-back-end-](https://github.com/danielAVAR/cmdb-back-end-)
 - **Frontend Repository:** [ArrivillagaDAS/cmdb_frontend](https://github.com/ArrivillagaDAS/cmdb_frontend)
 
 ---
 
-## ⚙️ Installation & Setup Guide
+## Installation & Setup Guide
 
 ### Prerequisites
 - Node.js (v18.x or higher)
@@ -104,9 +104,9 @@ Swagger API Docs will be available at: `http://localhost:5000/api-docs`
 
 ---
 
-## 📡 Endpoints & Consumption Examples
+## Endpoints & Consumption Examples
 
-### 🔐 1. Authentication
+### 1. Authentication
 
 #### User Login
 - **Endpoint:** `POST /api/v1/auth/login`
@@ -134,7 +134,7 @@ Swagger API Docs will be available at: `http://localhost:5000/api-docs`
 
 ---
 
-### 🎬 2. Movies & Series Catalog
+### 2. Movies & Series Catalog
 
 #### Get Movies List (Filtered & Sorted)
 - **Endpoint:** `GET /api/v1/movies?category=1&sort=ranking`
@@ -159,7 +159,7 @@ Swagger API Docs will be available at: `http://localhost:5000/api-docs`
 
 ---
 
-### ⭐ 3. Reviews & Ratings
+### 3. Reviews & Ratings
 
 #### Create Movie Review
 - **Endpoint:** `POST /api/v1/movies/:id/reviews`
@@ -199,5 +199,5 @@ scrum: https://canva.link/wkx7jp6vim0mi2n
 
 historias de usuario: https://canva.link/cagm5h6fnzxndxe
 
-## 📄 License
+## License
 This project is open-source and available under the [MIT License](LICENSE).
