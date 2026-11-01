@@ -6,9 +6,7 @@ Repositorio de esta API: [danielAVAR/cmdb-back-end-](https://github.com/danielAV
 
 ## Documentación
 
-- Video: https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
-- Scrum: https://canva.link/wkx7jp6vim0mi2n
-- Historias de usuario: https://canva.link/cagm5h6fnzxndxe
+- Video, scrum, historias de usuario: https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
 
 ## Requisitos
 
