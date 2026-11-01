@@ -1,14 +1,14 @@
 # Carlos Movie Database (CMDB)
 
-https://cmdb-back-end.onrender.com
-
 API para descubrir películas, anime y series geek, publicar reseñas, reaccionar a reseñas y consultar un ranking. El backend usa Node.js, Express y MySQL. El frontend se desarrolla en un repositorio independiente.
 
 Repositorio de esta API: [danielAVAR/cmdb-back-end-](https://github.com/danielAVAR/cmdb-back-end-)
 
 ## Documentación
 
-- Video, scrum, historias de usuario: https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
+- Video: https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
+- Scrum: https://canva.link/wkx7jp6vim0mi2n
+- Historias de usuario: https://canva.link/cagm5h6fnzxndxe
 
 ## Requisitos
 
@@ -23,6 +23,28 @@ Repositorio de esta API: [danielAVAR/cmdb-back-end-](https://github.com/danielAV
 4. Inicia el servidor con `npm run dev`.
 
 La API queda disponible en `http://localhost:3000/api/v1` y Swagger UI en `http://localhost:3000/api-docs`.
+
+## Base de datos
+
+![Diagrama de la base de datos](docs/diagrama-base-de-datos.png)
+
+La base de datos MySQL está formada por las siguientes tablas:
+
+- **`users`**: usuarios registrados. El campo `administrator` indica si el usuario tiene permisos de administrador.
+- **`movies`**: películas, series o anime. Guarda los datos principales, el `status` (`pending` o aprobado), el usuario que la propuso (`created_by`) y los acumulados para calcular la calificación promedio (`rating_sum` y `rating_count`).
+- **`categories`**: categorías de contenido, como acción, anime o terror.
+- **`movie_categories`**: tabla intermedia que relaciona películas con categorías. Una película puede tener varias categorías y una categoría puede tener varias películas.
+- **`directors`** y **`movie_directors`**: directores y su relación con las películas. Una película puede tener varios directores.
+- **`actors`** y **`movie_actors`**: actores, con su biografía y fecha de nacimiento, y su relación con las películas.
+- **`reviews`**: reseñas que un usuario publica sobre una película, con título, comentario, calificación del 1 al 10 y contadores de `likes` y `dislikes`.
+- **`user_reactions`**: registra la reacción (`like` o `dislike`) que un usuario da a una reseña. Un usuario solo puede reaccionar una vez a cada reseña.
+
+Relaciones principales:
+
+- Un usuario puede proponer muchas películas (`movies.created_by`) y publicar muchas reseñas (`reviews.user_id`).
+- Una película puede tener muchas reseñas.
+- Un usuario puede reaccionar a muchas reseñas, y una reseña puede recibir reacciones de muchos usuarios, a través de `user_reactions`.
+- Las relaciones muchos a muchos entre películas y categorías, directores y actores se resuelven con las tablas intermedias `movie_categories`, `movie_directors` y `movie_actors`.
 
 ## Variables de entorno
 
