@@ -1,4 +1,6 @@
 import { api, unwrapList } from "./api.js";
+import { requireAdmin } from "./session.js";
+requireAdmin();
 import {
   $,
   $$,

@@ -1,5 +1,15 @@
 import { config } from "./config.js";
 
+import { isLoggedIn, isAdmin } from "./auth.js";
+
+export function requireLogin() {
+  if (!isLoggedIn()) location.href = "./login.html";
+}
+
+export function requireAdmin() {
+  if (!isLoggedIn() || !isAdmin()) location.href = "./login.html";
+}
+
 export function getToken() {
   try {
     return localStorage.getItem(config.tokenKey);
