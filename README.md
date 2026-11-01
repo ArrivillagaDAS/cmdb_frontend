@@ -2,6 +2,14 @@
 
 API para descubrir películas, anime y series geek, publicar reseñas, reaccionar a reseñas y consultar un ranking. El backend usa Node.js, Express y MySQL. El frontend se desarrolla en un repositorio independiente.
 
+Repositorio de esta API: [danielAVAR/cmdb-back-end-](https://github.com/danielAVAR/cmdb-back-end-)
+
+## Documentación
+
+- Video: https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
+- Scrum: https://canva.link/wkx7jp6vim0mi2n
+- Historias de usuario: https://canva.link/cagm5h6fnzxndxe
+
 ## Requisitos
 
 - Node.js 20 o posterior y npm.
