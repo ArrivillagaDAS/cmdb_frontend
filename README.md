@@ -1,203 +1,91 @@
-# CMDB — Carlos Movies Data Base (Backend API)
+# Carlos Movie Database (CMDB)
 
-![Node.js](https://img.shields.io/badge/Node.js-v18+-green?style=flat-square&logo=node.js)
-![Express](https://img.shields.io/badge/Express-4.x-black?style=flat-square&logo=express)
-![MySQL](https://img.shields.io/badge/MySQL-8.x-blue?style=flat-square&logo=mysql)
-![JWT](https://img.shields.io/badge/Auth-JWT-red?style=flat-square&logo=json-web-tokens)
-![SemVer](https://img.shields.io/badge/SemVer-2.0.0-orange?style=flat-square)
+API para descubrir películas, anime y series geek, publicar reseñas, reaccionar a reseñas y consultar un ranking. El backend usa Node.js, Express y MySQL. El frontend se desarrolla en un repositorio independiente.
 
-## Project Overview & Theme
-**CMDB (Carlos Movies Data Base)** is a high-performance RESTful API built for a full-stack web application designed for film, series, and anime enthusiasts. The platform allows users to explore catalog items, rate titles, publish detailed reviews, and engage with community feedback via like/dislike interactions.
+## Requisitos
 
-The architecture emphasizes security, transactional consistency, dynamic rating calculations, and role-based authorization (User vs. Administrator).
+- Node.js 20 o posterior y npm.
+- MySQL 8 o posterior.
 
-### Key Features
-- **Authentication & Roles:** JWT authentication with role-based permissions (`user` and `admin`).
-- **Catalog Management:** Full CRUD operations for movies, series, and categories (Admin approval workflow).
-- **Review System:** Interactive reviews with numerical ratings (1–10) and peer voting (like/dislike).
-- **Data Integrity:** Database transactions for critical actions (rating averages and vote counters).
-- **Security & Rate Limiting:** Request throttling via `express-rate-limit` and parameter validation with `express-validator`.
+## Instalación y ejecución
 
----
+1. Instala las dependencias con `npm ci`.
+2. Copia `.env.example` a `.env` y configura la conexión a MySQL y un secreto JWT aleatorio.
+3. Crea las tablas ejecutando `mysql -u <usuario> -p < sql/schema.sql`.
+4. Inicia el servidor con `npm run dev`.
 
-## Tech Stack
+La API queda disponible en `http://localhost:3000/api/v1` y Swagger UI en `http://localhost:3000/api-docs`.
 
-### Core Technologies
-- **Runtime Environment:** Node.js
-- **Web Framework:** Express.js
-- **Database:** MySQL 8.x (Relational persistence using native connection pools)
+## Variables de entorno
 
-### Security & Authentication
-- `jsonwebtoken` & `passport-jwt` — Token-based authorization strategies.
-- `bcrypt` — Password hashing and salted security.
-- `express-rate-limit` — Protection against brute-force attacks and abuse.
-- `express-validator` — Strict endpoint input sanitization and validation.
+| Variable | Uso |
+| --- | --- |
+| `APP_PORT` | Puerto HTTP; por defecto `3000`. |
+| `FRONTEND_URL` | Origen permitido por CORS, por ejemplo `http://localhost:5500`. |
+| `DB_HOST`, `DB_PORT` | Dirección y puerto de MySQL. |
+| `DB_NAME` | Base de datos; por defecto `cmdb`. |
+| `DB_USER`, `DB_PASSWORD` | Credenciales de MySQL. |
+| `DB_CONNECTION_LIMIT` | Máximo de conexiones del pool. |
+| `JWT_SECRET` | Secreto largo y aleatorio para firmar los tokens. |
+| `JWT_EXPIRES_IN` | Vigencia del token, por ejemplo `1h` o `7d`. |
 
-### Tooling & Documentation
-- `dotenv` — Environment configuration management.
-- `swagger-ui-express` — Interactive API documentation.
-- `semver` — API version control compliance.
-- `cors` — Cross-Origin Resource Sharing for frontend client integration.
+No subas `.env` al repositorio.
 
----
+## Autenticación y permisos
 
-## Connected Repositories
+El registro crea usuarios normales. El administrador se representa mediante `users.administrator`; no existe una ruta pública para elevar ese permiso. Para probar rutas administrativas, cambia el valor de ese campo directamente en una base de datos local de desarrollo. El login devuelve un JWT; envíalo como `Authorization: Bearer <token>`.
 
-- **Backend Repository:** [danielAVAR/cmdb-back-end-](https://github.com/danielAVAR/cmdb-back-end-)
-- **Frontend Repository:** [ArrivillagaDAS/cmdb_frontend](https://github.com/ArrivillagaDAS/cmdb_frontend)
+Las películas nuevas quedan en estado `pending`. Un administrador puede listarlas en `GET /movies/pending` y aprobarlas con `PATCH /movies/:id/approve`. Los usuarios autenticados pueden proponer películas, pero solo quien la creó o un administrador puede editarla o borrarla.
 
----
+## Rutas principales
 
-## Installation & Setup Guide
+Todas las rutas están documentadas y se pueden probar en Swagger UI.
 
-### Prerequisites
-- Node.js (v18.x or higher)
-- MySQL Server (v8.x)
-- Git
+| Método | Ruta | Acceso | Acción |
+| --- | --- | --- | --- |
+| `POST` | `/auth/register` | Público | Registrar un usuario. |
+| `POST` | `/auth/login` | Público | Iniciar sesión y obtener un JWT. |
+| `GET` | `/auth/me` | JWT | Consultar el usuario autenticado. |
+| `GET`, `GET /:id` | `/categories` | Público | Listar y consultar categorías. |
+| `POST`, `PUT /:id`, `DELETE /:id` | `/categories` | Administrador | Administrar categorías. |
+| `GET` | `/movies?sort=ranking&categoryId=1` | Público | Listar películas aprobadas, filtrarlas y ordenarlas. |
+| `GET /:id` | `/movies` | Público | Consultar detalle, categorías, reparto, dirección y reseñas. |
+| `POST`, `PUT /:id`, `DELETE /:id` | `/movies` | JWT | Proponer, editar o eliminar una película según permisos. |
+| `GET /pending`, `PATCH /:id/approve` | `/movies` | Administrador | Revisar y aprobar propuestas. |
+| `GET /?movieId=1`, `GET /:id` | `/reviews` | Público | Consultar reseñas. |
+| `POST`, `PUT /:id`, `DELETE /:id` | `/reviews` | JWT | Crear y administrar reseñas propias. |
+| `PUT /:id/reaction`, `DELETE /:id/reaction` | `/reviews` | JWT | Dar o quitar like o dislike a reseñas ajenas. |
+| `GET` | `/version` | Público | Consultar la versión de la API. |
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/danielAVAR/cmdb-back-end-.git
-cd cmdb-back-end-
+Ejemplo de registro:
+
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{"username":"ana","email":"ana@example.com","password":"una-clave-segura"}
 ```
 
-### 2. Install Dependencies
-```bash
-npm install
-```
+Ejemplo de propuesta de película (requiere JWT):
 
-### 3. Environment Variables Configuration
-Create a `.env` file in the root directory and define the following variables:
-
-```env
-PORT=5000
-NODE_ENV=development
-
-# Database Configuration
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=cmdb_db
-DB_PORT=3306
-
-# JWT Secret Key
-JWT_SECRET=your_super_secret_jwt_key
-JWT_EXPIRES_IN=24h
-```
-
-### 4. Database Setup
-Import the database schema into your MySQL instance:
-```bash
-mysql -u root -p cmdb_db < database/schema.sql
-```
-
-### 5. Start the Server
-```bash
-# Development mode with auto-reload
-npm run dev
-
-# Production mode
-npm start
-```
-The server will run at: `http://localhost:5000`  
-Swagger API Docs will be available at: `http://localhost:5000/api-docs`
-
----
-
-## Endpoints & Consumption Examples
-
-### 1. Authentication
-
-#### User Login
-- **Endpoint:** `POST /api/v1/auth/login`
-- **Headers:** `Content-Type: application/json`
-- **Request Body:**
 ```json
 {
-  "email": "user@cmdb.com",
-  "password": "SecurePassword123!"
-}
-```
-- **Response (`200 OK`):**
-```json
-{
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "name": "Sofi",
-    "email": "user@cmdb.com",
-    "role": "user"
-  }
+  "movieName": "Ejemplo",
+  "overview": "Descripción de la película.",
+  "releaseYear": 2025,
+  "categoryIds": [1],
+  "imageUrl": null
 }
 ```
 
----
+## Frontend
 
-### 2. Movies & Series Catalog
+El frontend independiente se construye con HTML, CSS y JavaScript sin framework. Su URL de repositorio todavía no está definida; agrégala aquí cuando exista.
 
-#### Get Movies List (Filtered & Sorted)
-- **Endpoint:** `GET /api/v1/movies?category=1&sort=ranking`
-- **Response (`200 OK`):**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 12,
-      "title": "Hollow Knight: The Movie",
-      "description": "An epic dark fantasy journey.",
-      "category_id": 1,
-      "release_year": 2026,
-      "poster_path": "/images/posters/hollow_knight.jpg",
-      "rating_average": 9.4,
-      "status": "approved"
-    }
-  ]
-}
-```
+## Estructura
 
----
+La documentación en español de cada carpeta está junto a sus archivos, en un `README.md` dentro de la carpeta correspondiente.
 
-### 3. Reviews & Ratings
+## Licencia
 
-#### Create Movie Review
-- **Endpoint:** `POST /api/v1/movies/:id/reviews`
-- **Headers:** 
-  - `Content-Type: application/json`
-  - `Authorization: Bearer <YOUR_JWT_TOKEN>`
-- **Request Body:**
-```json
-{
-  "title": "Masterpiece",
-  "comment": "Incredible sound design and breathtaking visual aesthetics.",
-  "rating": 10
-}
-```
-- **Response (`201 Created`):**
-```json
-{
-  "success": true,
-  "message": "Review submitted successfully",
-  "review": {
-    "id": 45,
-    "movie_id": 12,
-    "user_id": 1,
-    "rating": 10,
-    "likes_count": 0,
-    "dislikes_count": 0
-  }
-}
-```
-
----
-
-## links, documentacion
-vide: https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
-
-scrum: https://canva.link/wkx7jp6vim0mi2n
-
-historias de usuario: https://canva.link/cagm5h6fnzxndxe
-
-## License
-This project is open-source and available under the [MIT License](LICENSE).
+ISC.
