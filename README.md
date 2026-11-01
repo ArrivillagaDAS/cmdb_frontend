@@ -1,6 +1,6 @@
-🎬 CMDB — Carlos Movies Data Base (Backend API)
+CMDB — Carlos Movies Data Base (Backend API)
 
-📌 Project Overview & Theme
+Project Overview & Theme
 
 CMDB (Carlos Movies Data Base) is a high-performance RESTful API built for a full-stack web application designed for film, series, and anime enthusiasts. The platform allows users to explore catalog items, rate titles, publish detailed reviews, and engage with community feedback via like/dislike interactions.
 
@@ -48,13 +48,13 @@ semver — API version control compliance.
 
 cors — Cross-Origin Resource Sharing for frontend client integration.
 
-🔗 Connected Repositories
+Connected Repositories
 
 Backend Repository: danielAVAR/cmdb-back-end-
 
 Frontend Repository: ArrivillagaDAS/cmdb_frontend
 
-⚙️ Installation & Setup Guide
+Installation & Setup Guide
 
 Prerequisites
 
@@ -114,9 +114,9 @@ The server will run at: http://localhost:5000
 
 Swagger API Docs will be available at: http://localhost:5000/api-docs
 
-📡 Endpoints & Consumption Examples
+Endpoints & Consumption Examples
 
-🔐 1. Authentication
+1. Authentication
 
 User Login
 
@@ -146,7 +146,7 @@ Response (200 OK):
 }
 
 
-🎬 2. Movies & Series Catalog
+ 2. Movies & Series Catalog
 
 Get Movies List (Filtered & Sorted)
 
@@ -171,7 +171,7 @@ Response (200 OK):
 }
 
 
-⭐ 3. Reviews & Ratings
+3. Reviews & Ratings
 
 Create Movie Review
 
@@ -205,6 +205,10 @@ Response (201 Created):
     "likes_count": 0,
     "dislikes_count": 0
   }
+
+
+  link video:
+  https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing
 }
 
 
