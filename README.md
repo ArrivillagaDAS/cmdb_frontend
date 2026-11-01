@@ -26,7 +26,7 @@ La API queda disponible en `http://localhost:3000/api/v1` y Swagger UI en `http:
 
 ## Base de datos
 
-![Diagrama de la base de datos](docs/diagrama-base-de-datos.png)
+![Diagrama de la base de datos](assets/data.base.jpeg)
 
 La base de datos MySQL está formada por las siguientes tablas:
 
