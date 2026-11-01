@@ -1,194 +1,105 @@
 import { config } from "./config.js";
-import { clearSession, getToken } from "./session.js";
+import { getToken, clearSession } from "./auth.js";
 
 export class ApiError extends Error {
-  constructor(
-    message,
-    { status = 0, code = "NETWORK_ERROR", details = null } = {},
-  ) {
+  constructor({ status = 0, message = "Error inesperado", errors = [] } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
-    this.code = code;
-    this.details = details;
+    this.errors = errors;
   }
 }
 
-function normalizeKeys(value) {
-  if (Array.isArray(value)) {
-    return value.map(normalizeKeys);
-  }
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
-      normalizeKeys(item),
-    ]),
-  );
-}
-
-function normalizeError(payload, status) {
-  const message =
-    payload?.message ||
-    payload?.error ||
-    (status === 401
-      ? "Tu sesión ha expirado. Inicia sesión de nuevo."
-      : status === 403
-        ? "No tienes permiso para realizar esta acción."
-        : `La solicitud falló (${status}).`);
-  return new ApiError(message, {
-    status,
-    code: payload?.code || "HTTP_ERROR",
-    details: payload?.details || payload?.errors || null,
-  });
-}
-
-export async function request(
-  path,
-  { method = "GET", body, headers = {}, auth = true, signal, query } = {},
-) {
-  const requestHeaders = new Headers({
-    Accept: "application/json",
-    ...headers,
-  });
-  if (body !== undefined && !(body instanceof FormData)) {
-    requestHeaders.set("Content-Type", "application/json");
-  }
+async function request(path, { method = "GET", body, auth = true } = {}) {
   const token = auth ? getToken() : null;
-  if (token) {
-    requestHeaders.set("Authorization", `Bearer ${token}`);
-  }
+  const headers = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
-  const abortRequest = () => controller.abort();
-  if (signal?.aborted) {
-    abortRequest();
-  } else if (signal) {
-    signal.addEventListener("abort", abortRequest, { once: true });
-  }
+
+  let res;
   try {
-    const url = new URL(
-      `${config.apiBaseUrl}/${String(path).replace(/^\/+/, "")}`,
-    );
-    if (query) {
-      Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          url.searchParams.set(key, String(value));
-        }
-      });
-    }
-    const response = await fetch(url, {
+    res = await fetch(`${config.apiBaseUrl}${path}`, {
       method,
-      headers: requestHeaders,
-      body:
-        body === undefined
-          ? undefined
-          : body instanceof FormData
-            ? body
-            : JSON.stringify(body),
-      signal: controller.signal,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
       credentials: config.credentials,
+      signal: controller.signal,
     });
-    const raw = await response.text();
-    let payload = null;
-    if (raw) {
-      try {
-        payload = JSON.parse(raw);
-      } catch {
-        payload = { message: raw };
-      }
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new ApiError({ status: 408, message: "El servidor tardó demasiado. Intenta de nuevo." });
     }
-    if (!response.ok) {
-      if (response.status === 401 && auth) {
-        clearSession();
-      }
-      throw normalizeError(payload, response.status);
-    }
-    return normalizeKeys(payload?.data ?? payload);
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    if (error.name === "AbortError") {
-      throw new ApiError("La solicitud tardó demasiado. Inténtalo de nuevo.", {
-        code: "TIMEOUT",
-      });
-    }
-    throw new ApiError(
-      "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
-      { code: "NETWORK_ERROR" },
-    );
+    throw new ApiError({ message: "No hay conexión con el servidor." });
   } finally {
     clearTimeout(timer);
-    if (signal) {
-      signal.removeEventListener("abort", abortRequest);
-    }
   }
+
+  if (res.status === 204) return null;
+
+  const payload = await res.json().catch(() => null);
+
+  // Token vencido o inválido: se borra la sesión local
+  if (res.status === 401 && token) clearSession();
+
+  if (!res.ok || payload?.success === false) {
+    throw new ApiError({
+      status: res.status,
+      message: payload?.message || `Error ${res.status}`,
+      errors: payload?.errors || [],
+    });
+  }
+
+  return payload?.data ?? null;
 }
 
-const segment = (value) => encodeURIComponent(String(value));
-export const api = Object.freeze({
-  auth: {
-    login: (credentials) =>
-      request("auth/login", { method: "POST", body: credentials, auth: false }),
-    register: (data) =>
-      request("auth/register", { method: "POST", body: data, auth: false }),
-    me: () => request("auth/me"),
-    logout: () => request("auth/logout", { method: "POST" }),
-  },
-  titles: {
-    list: (params, { auth = false } = {}) =>
-      request("titles", { auth, query: params }),
-    get: (id, { auth = false } = {}) =>
-      request(`titles/${segment(id)}`, { auth }),
-    create: (data) => request("titles", { method: "POST", body: data }),
-    update: (id, data) =>
-      request(`titles/${segment(id)}`, { method: "PATCH", body: data }),
-    remove: (id) => request(`titles/${segment(id)}`, { method: "DELETE" }),
-    stats: () => request("stats", { auth: false }),
-  },
-  reviews: {
-    list: (titleId, params = {}) =>
-      request(`titles/${segment(titleId)}/reviews`, {
-        auth: false,
-        query: params,
-      }),
-    create: (titleId, data) =>
-      request(`titles/${segment(titleId)}/reviews`, {
-        method: "POST",
-        body: data,
-      }),
-    vote: (reviewId, value) =>
-      request(`reviews/${segment(reviewId)}/votes`, {
-        method: "PUT",
-        body: { value },
-      }),
-    pending: () => request("admin/reviews", { query: { status: "pending" } }),
-    moderate: (id, status) =>
-      request(`admin/reviews/${segment(id)}`, {
-        method: "PATCH",
-        body: { status },
-      }),
-  },
-});
+// Autenticación
+export const register = (data) =>
+  request("/auth/register", { method: "POST", body: data, auth: false });
 
-export function unwrapList(result) {
-  if (Array.isArray(result)) {
-    return { items: result, pagination: null };
-  }
-  if (Array.isArray(result?.items)) {
-    return { items: result.items, pagination: result.pagination ?? null };
-  }
-  if (Array.isArray(result?.rows)) {
-    return { items: result.rows, pagination: result.pagination ?? null };
-  }
-  return { items: [], pagination: null };
+export const login = (credentials) =>
+  request("/auth/login", { method: "POST", body: credentials, auth: false });
+
+// Categorías
+export const listCategories = () => request("/categories", { auth: false });
+
+export const createCategory = (name) =>
+  request("/categories", { method: "POST", body: { category_name: name } });
+
+export const updateCategory = (id, name) =>
+  request(`/categories/${id}`, { method: "PUT", body: { category_name: name } });
+
+export const deleteCategory = (id) =>
+  request(`/categories/${id}`, { method: "DELETE" });
+
+// Películas
+export function listMovies({ categoryId, sort } = {}) {
+  const params = new URLSearchParams();
+  if (categoryId) params.set("category_id", categoryId);
+  if (sort) params.set("sort", sort);
+  const query = params.toString();
+  return request(`/movies${query ? `?${query}` : ""}`, { auth: false });
 }
 
-export function getErrorMessage(error) {
-  return error instanceof ApiError
-    ? error.message
-    : "Ocurrió un error inesperado. Inténtalo de nuevo.";
-}
+export const getMovie = (id) => request(`/movies/${id}`);
+
+export const createMovie = (data) =>
+  request("/movies", { method: "POST", body: data });
+
+export const approveMovie = (id) =>
+  request(`/movies/${id}/approve`, { method: "PATCH" });
+
+// Reseñas y reacciones
+export const createReview = (movieId, data) =>
+  request(`/movies/${movieId}/reviews`, { method: "POST", body: data });
+
+export const updateReview = (id, data) =>
+  request(`/reviews/${id}`, { method: "PUT", body: data });
+
+export const deleteReview = (id) =>
+  request(`/reviews/${id}`, { method: "DELETE" });
+
+export const reactToReview = (id, reaction) =>
+  request(`/reviews/${id}/reactions`, { method: "POST", body: { reaction } });
