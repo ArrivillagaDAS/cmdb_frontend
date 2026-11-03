@@ -602,6 +602,25 @@ img {
   background: var(--panel);
   border: 1px solid var(--border);
 }
+.detail-poster-wrap {
+  min-width: 0;
+}
+.poster-fallback {
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  text-align: center;
+  color: var(--gold);
+  font: 500 20px var(--display);
+  background: radial-gradient(ellipse at 50% 30%, #382b26, #111113 72%);
+}
+.detail-credit {
+  color: var(--muted);
+  font-size: 11px;
+}
+.detail-credit strong {
+  color: var(--text);
+}
 .detail-info h1 {
   font: 500 clamp(34px, 5vw, 53px)/1.15 var(--display);
   margin: 4px 0 12px;
@@ -657,6 +676,10 @@ img {
 .review-list {
   display: grid;
   gap: 12px;
+}
+.review-title {
+  margin: 12px 0 0;
+  font: 600 14px var(--display);
 }
 .admin-main {
   min-height: calc(100vh - 145px);
@@ -771,6 +794,10 @@ img {
   }
   .main-nav {
     display: none;
+  }
+  .menu-toggle {
+    display: inline-grid;
+    place-items: center;
   }
   .header-actions {
     gap: 5px;

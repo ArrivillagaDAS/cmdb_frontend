@@ -66,10 +66,10 @@ export const login = (credentials) =>
 export const listCategories = () => request("/categories", { auth: false });
 
 export const createCategory = (name) =>
-  request("/categories", { method: "POST", body: { category_name: name } });
+  request("/categories", { method: "POST", body: { categoryName: name } });
 
 export const updateCategory = (id, name) =>
-  request(`/categories/${id}`, { method: "PUT", body: { category_name: name } });
+  request(`/categories/${id}`, { method: "PUT", body: { categoryName: name } });
 
 export const deleteCategory = (id) =>
   request(`/categories/${id}`, { method: "DELETE" });
@@ -77,7 +77,7 @@ export const deleteCategory = (id) =>
 // Películas
 export function listMovies({ categoryId, sort } = {}) {
   const params = new URLSearchParams();
-  if (categoryId) params.set("category_id", categoryId);
+  if (categoryId) params.set("categoryId", categoryId);
   if (sort) params.set("sort", sort);
   const query = params.toString();
   return request(`/movies${query ? `?${query}` : ""}`, { auth: false });
@@ -88,12 +88,28 @@ export const getMovie = (id) => request(`/movies/${id}`);
 export const createMovie = (data) =>
   request("/movies", { method: "POST", body: data });
 
+export const updateMovie = (id, data) =>
+  request(`/movies/${id}`, { method: "PUT", body: data });
+
+export const deleteMovie = (id) =>
+  request(`/movies/${id}`, { method: "DELETE" });
+
+export const listPendingMovies = () => request("/movies/pending");
+
 export const approveMovie = (id) =>
   request(`/movies/${id}/approve`, { method: "PATCH" });
 
 // Reseñas y reacciones
+export const listReviews = (movieId) => {
+  const query = movieId ? `?movieId=${encodeURIComponent(movieId)}` : "";
+  return request(`/reviews${query}`, { auth: false });
+};
+
 export const createReview = (movieId, data) =>
-  request(`/movies/${movieId}/reviews`, { method: "POST", body: data });
+  request("/reviews", {
+    method: "POST",
+    body: { ...data, movieId: Number(movieId) },
+  });
 
 export const updateReview = (id, data) =>
   request(`/reviews/${id}`, { method: "PUT", body: data });
@@ -102,4 +118,7 @@ export const deleteReview = (id) =>
   request(`/reviews/${id}`, { method: "DELETE" });
 
 export const reactToReview = (id, reaction) =>
-  request(`/reviews/${id}/reactions`, { method: "POST", body: { reaction } });
+  request(`/reviews/${id}/reaction`, { method: "PUT", body: { reaction } });
+
+export const removeReviewReaction = (id) =>
+  request(`/reviews/${id}/reaction`, { method: "DELETE" });

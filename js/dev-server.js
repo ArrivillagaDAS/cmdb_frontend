@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { extname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const rootDirectory = fileURLToPath(new URL(".", import.meta.url));
+const rootDirectory = fileURLToPath(new URL("../", import.meta.url));
 const port = Number(process.env.PORT) || 5173;
 const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],

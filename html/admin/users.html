@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="theme-color" content="#0a0a0b" />
+    <title>Usuarios — Administración CMDB</title>
+    <link rel="stylesheet" href="../../css/styles.css" /><link rel="stylesheet" href="../../css/components.css" /><link rel="stylesheet" href="../../css/admin.css" />
+    <script type="module" src="../../js/admin/users.js"></script>
+  </head>
+  <body>
+    <header class="site-header"><a class="brand" href="/html/index.html"><span class="brand-mark">C</span><span><strong>CMDB</strong><small>ADMINISTRACIÓN</small></span></a><div class="header-actions"><span class="admin-header-user" data-admin-identity></span><button class="button button-quiet" data-admin-logout>Cerrar sesión</button></div></header>
+    <main class="admin-layout"><aside class="admin-sidebar"><p class="admin-sidebar-label">PANEL DE CONTROL</p><nav class="admin-nav" data-admin-nav aria-label="Administración"></nav></aside>
+      <section class="admin-content"><p class="eyebrow">CUENTAS DE CMDB</p><div class="admin-title-row"><div><h1>Gestión de <em>usuarios</em></h1><p class="admin-subtitle">Administración de cuentas y permisos.</p></div></div>
+        <div class="admin-box"><h2>Falta soporte en la API</h2><p class="admin-subtitle">El backend actual solo permite registrar, iniciar sesión y consultar al usuario autenticado. No ofrece una ruta administrativa para listar, editar, bloquear o eliminar cuentas, así que esta página no enviará cambios que el servidor no pueda procesar.</p><p class="admin-subtitle">Para habilitar esta sección hacen falta endpoints protegidos para listar usuarios y administrar su estado o permisos. Los cambios de permisos deben validarse siempre en el backend.</p></div>
+      </section>
+    </main>
+    <footer class="site-footer"><span>© <span data-year></span> CMDB</span><a class="text-link" href="/html/index.html">Ver el archivo ↑</a></footer>
+  </body>
+</html>

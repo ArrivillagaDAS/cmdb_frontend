@@ -1,6 +1,7 @@
 import { listMovies, listCategories, ApiError } from "./api.js";
 import { isLoggedIn, clearSession } from "./auth.js";
 import { config } from "./config.js";
+import { posterUrl } from "./posters.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -12,7 +13,7 @@ const els = {
   loadMore: $("#load-more"),
   form: $("#filter-form"),
   search: $("#filter-form input[name='search']"),
-  category: $("#filter-form select[name='type']"),
+  category: $("#filter-form select[name='category']"),
   sort: $("#filter-form select[name='sort']"),
 };
 
@@ -38,34 +39,61 @@ function posterCard(movie) {
   article.className = "poster-card";
 
   const link = document.createElement("a");
+  link.className = "poster-link";
   link.href = `./detail.html?id=${movie.id}`;
 
-  const art = document.createElement("div");
-  art.className = "poster-art";
-
-  const initial = movie.movie_name.charAt(0).toUpperCase();
-  if (movie.image_url) {
+  const image = posterUrl(movie);
+  if (image) {
     const img = document.createElement("img");
-    img.src = movie.image_url;
+    img.className = "poster-image";
+    img.src = image;
     img.alt = movie.movie_name;
     img.loading = "lazy";
-    // Si la imagen no carga, se muestra la inicial en su lugar
-    img.onerror = () => art.replaceChildren(initial);
-    art.append(img);
+    img.onerror = () => {
+      const fallback = posterUrl({ ...movie, image_url: null });
+      if (fallback && img.src !== fallback) {
+        img.src = fallback;
+        img.onerror = () => showPosterPlaceholder(img, movie.movie_name);
+        return;
+      }
+      showPosterPlaceholder(img, movie.movie_name);
+    };
+    link.append(img);
   } else {
-    art.textContent = initial;
+    const placeholder = document.createElement("div");
+    placeholder.className = "poster-placeholder";
+    placeholder.textContent = movie.movie_name;
+    link.append(placeholder);
   }
 
+  const overlay = document.createElement("div");
+  overlay.className = "poster-overlay";
+  const overview = document.createElement("p");
+  overview.textContent = movie.overview || "Explora los detalles de esta película.";
+  const year = document.createElement("span");
+  year.textContent = movie.release_year || "Año desconocido";
+  overlay.append(overview, year);
+  link.append(overlay);
+
+  const caption = document.createElement("div");
+  caption.className = "poster-caption";
   const title = document.createElement("h3");
   title.textContent = movie.movie_name;
 
   const meta = document.createElement("p");
-  const rating = movie.average !== null ? `★ ${movie.average}` : "Sin calificar";
+  const rating = movie.average_rating != null ? `★ ${Number(movie.average_rating).toFixed(1)}` : "Sin calificar";
   meta.textContent = `${movie.release_year} · ${rating}`;
 
-  link.append(art, title, meta);
-  article.append(link);
+  caption.append(title, meta);
+  article.append(link, caption);
   return article;
+}
+
+function showPosterPlaceholder(image, movieName) {
+  const placeholder = document.createElement("div");
+  placeholder.className = "poster-placeholder";
+  placeholder.textContent = movieName;
+  image.replaceWith(placeholder);
 }
 
 // Ranking: las 5 mejores según el ranking ponderado del backend
@@ -135,14 +163,17 @@ async function loadCategories() {
     const categories = await listCategories();
     const options = categories.map((c) => new Option(c.category_name, c.id));
     els.category.replaceChildren(new Option("Todas las categorías", ""), ...options);
+    els.category.disabled = false;
+    setStat("categories", categories.length);
   } catch {
-    // Sin categorías el listado sigue funcionando, solo sin ese filtro
+    els.category.replaceChildren(new Option("Categorías no disponibles", ""));
   }
 }
 
 // Si hay sesión, el enlace del encabezado pasa a cerrar sesión
 function setupAuthLink() {
   const link = document.querySelector("[data-auth-link]");
+  const joinLink = document.querySelector("[data-join-link]");
   if (!link || !isLoggedIn()) return;
 
   link.textContent = "Cerrar sesión";
@@ -151,6 +182,32 @@ function setupAuthLink() {
     event.preventDefault();
     clearSession();
     location.reload();
+  });
+  joinLink?.classList.add("hidden");
+}
+
+function setupMobileMenu() {
+  const button = document.querySelector(".menu-toggle");
+  const navigation = document.querySelector("#main-navigation");
+  if (!button || !navigation) return;
+
+  const closeMenu = () => {
+    navigation.classList.remove("is-open");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", "Abrir navegación");
+  };
+
+  button.addEventListener("click", () => {
+    const open = button.getAttribute("aria-expanded") !== "true";
+    navigation.classList.toggle("is-open", open);
+    button.setAttribute("aria-expanded", String(open));
+    button.setAttribute("aria-label", open ? "Cerrar navegación" : "Abrir navegación");
+  });
+  navigation.addEventListener("click", (event) => {
+    if (event.target.closest("a")) closeMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
   });
 }
 
@@ -168,6 +225,7 @@ document.querySelectorAll("[data-year]").forEach((el) => {
 });
 
 setupAuthLink();
+setupMobileMenu();
 loadCategories();
 loadRanking();
 loadCatalog();

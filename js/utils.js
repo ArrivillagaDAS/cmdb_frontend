@@ -1,6 +1,6 @@
 export function showAlert(box, message, type = "error") {
   box.textContent = message;
-  box.className = `alert alert-${type}`;
+  box.className = type === "success" || type === true ? "alert success" : "alert";
   box.hidden = false;
 }
 

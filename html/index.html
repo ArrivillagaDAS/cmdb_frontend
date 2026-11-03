@@ -38,7 +38,7 @@
       <div class="header-actions">
         <a class="button button-quiet" data-auth-link href="/html/login.html"
           >Iniciar sesión</a
-        ><a class="button button-primary" href="/html/login.html#registro"
+        ><a class="button button-primary" data-join-link href="/html/login.html#registro"
           >Únete a CMDB</a
         ><button
           class="icon-button menu-toggle"
@@ -74,7 +74,7 @@
               <strong data-stat="reviews">—</strong><span>RESEÑAS</span>
             </div>
             <div>
-              <strong data-stat="members">—</strong><span>MIEMBROS</span>
+              <strong data-stat="categories">—</strong><span>CATEGORÍAS</span>
             </div>
           </div>
         </div>
@@ -115,19 +115,16 @@
             ><input
               type="search"
               name="search"
-              placeholder="Título, director, universo…" /></label
+              placeholder="Buscar por título…" /></label
           ><label class="select-field"
-            ><span class="sr-only">Tipo</span
-            ><select name="type">
-              <option value="">Todos los formatos</option>
-              <option value="movie">Películas</option>
-              <option value="anime">Anime</option>
-              <option value="series">Series</option>
+            ><span class="sr-only">Categoría</span
+            ><select name="category" disabled>
+              <option value="">Cargando categorías…</option>
             </select></label
           ><label class="select-field"
             ><span class="sr-only">Ordenar</span
             ><select name="sort">
-              <option value="rating">Mejor valorados</option>
+              <option value="popular">Mejor valorados</option>
               <option value="newest">Añadidos recientemente</option>
               <option value="title">Título A–Z</option>
             </select></label
