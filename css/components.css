@@ -352,3 +352,43 @@
     justify-content: end;
   }
 }
+
+.category-picker {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+
+.category-picker legend {
+  padding: 0 0.4rem;
+  font-size: 0.85rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.pending-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.catalog-message {
+  margin-top: 1rem;
+}

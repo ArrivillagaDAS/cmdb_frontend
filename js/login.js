@@ -35,9 +35,11 @@ loginForm.addEventListener("submit", async (event) => {
   const { email, password } = Object.fromEntries(new FormData(loginForm));
   button.disabled = true;
 
+  const { email, password } = Object.fromEntries(new FormData(loginForm));
+  const button = loginForm.querySelector('button[type="submit"]');
+  setBusy(button, true);
   try {
-    const session = await login({ email: email.trim(), password });
-    saveSession(session);
+    saveSession(await login({ email: email.trim(), password }));
     goHome();
   } catch (error) {
     showAlert(

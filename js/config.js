@@ -5,13 +5,8 @@ export const config = Object.freeze({
   apiBaseUrl: isLocal
     ? "http://localhost:3000/api/v1"
     : "https://cmdb-back-end.onrender.com/api/v1",
-  requestTimeoutMs: 60000,   // Render gratuito tarda en despertar
-  credentials: "omit",       // usamos token en el encabezado, no cookies
+  requestTimeoutMs: 60000, // the free Render instance can take a while to wake up
   tokenKey: "cmdb_access_token",
+  userKey: "cmdb_user",
   pageSize: 30,
-  tmdbApiBaseUrl: "https://api.themoviedb.org/3",
-  tmdbImageBaseUrl: "https://image.tmdb.org/t/p",
-  tmdbPosterSize: "w500",
-  tmdbDetailPosterSize: "w780",
-  tmdbBackdropSize: "w1280",
 });

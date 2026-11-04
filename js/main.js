@@ -1,5 +1,4 @@
 import { listMovies, listCategories, ApiError } from "./api.js";
-import { isLoggedIn, clearSession } from "./auth.js";
 import { config } from "./config.js";
 import { posterUrl } from "./posters.js";
 
@@ -20,12 +19,6 @@ const els = {
 let allMovies = [];
 let visibleCount = config.pageSize;
 
-function errorText(err) {
-  return err instanceof ApiError
-    ? err.message
-    : "No se pudo completar la acción. Intenta de nuevo.";
-}
-
 function showMessage(container, text) {
   const div = document.createElement("div");
   div.className = "loading-state";
@@ -33,7 +26,7 @@ function showMessage(container, text) {
   container.replaceChildren(div);
 }
 
-// Tarjeta de película. Todo el texto se asigna con textContent, nunca con innerHTML
+// Movie card. All text goes through textContent, never innerHTML
 function posterCard(movie) {
   const article = document.createElement("article");
   article.className = "poster-card";
@@ -112,12 +105,10 @@ async function loadRanking() {
   }
 }
 
-// Filtra por texto en el navegador y pagina con "Cargar más"
+// Text search runs in the browser over the loaded list; pagination with "Cargar más"
 function renderCatalog() {
   const term = els.search.value.trim().toLowerCase();
-  const matches = allMovies.filter((m) =>
-    m.movie_name.toLowerCase().includes(term)
-  );
+  const matches = allMovies.filter((m) => m.movie_name.toLowerCase().includes(term));
 
   els.count.textContent = `${matches.length} ${matches.length === 1 ? "título" : "títulos"}`;
   els.empty.classList.toggle("hidden", matches.length > 0);
@@ -136,7 +127,7 @@ function setStat(name, value) {
   if (el) el.textContent = value.toLocaleString("es");
 }
 
-// Catálogo: se vuelve a pedir al backend cuando cambian categoría u orden
+// The catalog is requested again from the backend when category or sort changes
 async function loadCatalog() {
   visibleCount = config.pageSize;
   showMessage(els.grid, "Preparando el archivo…");
@@ -146,8 +137,7 @@ async function loadCatalog() {
       categoryId: els.category.value || undefined,
       sort: els.sort.value,
     });
-
-    // Las estadísticas del hero reflejan el catálogo completo, no un filtro
+    // Hero stats reflect the full catalog, not a filtered view
     if (!els.category.value) updateStats();
     renderCatalog();
   } catch (err) {
@@ -220,10 +210,19 @@ els.loadMore.addEventListener("click", () => {
   renderCatalog();
 });
 
-document.querySelectorAll("[data-year]").forEach((el) => {
-  el.textContent = new Date().getFullYear();
+const proposeButton = $("#propose-movie");
+const catalogMessage = $("#catalog-message");
+
+if (isLoggedIn()) proposeButton.classList.remove("hidden");
+
+proposeButton.addEventListener("click", async () => {
+  const saved = await openMovieForm();
+  if (saved) {
+    showAlert(catalogMessage, "Propuesta enviada. Aparecerá en el catálogo cuando un administrador la apruebe.", "success");
+  }
 });
 
+setYear();
 setupAuthLink();
 setupMobileMenu();
 loadCategories();

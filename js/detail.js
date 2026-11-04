@@ -219,7 +219,37 @@ async function init() {
     } catch (error) {
       showAlert(alertBox, error.message || "No se pudo guardar la reacción.");
     } finally {
-      button.disabled = false;
+      setBusy(reviewSubmit, false);
+    }
+  });
+
+  // Review actions: like/dislike on others' reviews; edit or delete your own
+  $("#review-list").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button || button.disabled) return;
+    const reviewId = button.closest("[data-review-id]").dataset.reviewId;
+    clearAlert(reviewAlert);
+
+    if (button.dataset.action === "edit") {
+      const review = currentMovie.reviews.find((r) => String(r.id) === reviewId);
+      if (review) startEditingReview(review);
+      return;
+    }
+
+    setBusy(button, true);
+    try {
+      if (button.dataset.action === "delete") {
+        if (!window.confirm("¿Eliminar tu reseña?")) return;
+        await deleteReview(reviewId);
+        if (editingReviewId && String(editingReviewId) === reviewId) stopEditingReview();
+      } else {
+        await setReaction(reviewId, button.dataset.action);
+      }
+      await loadMovie();
+    } catch (err) {
+      showAlert(reviewAlert, errorText(err));
+    } finally {
+      setBusy(button, false);
     }
   });
 }
