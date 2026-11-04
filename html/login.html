@@ -13,7 +13,7 @@
     />
     <link rel="stylesheet" href="../css/styles.css" />
     <link rel="stylesheet" href="../css/components.css" />
-    <script type="module" src="../js/auth.js"></script>
+    <script type="module" src="../js/login.js"></script>
   </head>
   <body class="auth-page">
     <header class="site-header">
@@ -31,7 +31,7 @@
         <p>Guarda lo que te conmueve. Comparte lo que te obsesiona.</p>
         <div class="auth-art-caption">CMDB · ARCHIVE OF MOVING IMAGES</div>
       </aside>
-      <section class="auth-panel">
+      <section class="auth-panel" id="registro">
         <div class="auth-tabs" role="tablist">
           <button
             class="auth-tab active"
@@ -50,7 +50,7 @@
           </button>
         </div>
         <div class="alert hidden" id="auth-alert" role="alert"></div>
-        <form id="login-form" class="form-stack">
+        <form id="login-form" class="form-stack" method="post">
           <div>
             <p class="eyebrow">BIENVENIDO DE VUELTA</p>
             <h2>Continúa tu <em>archivo.</em></h2>
@@ -61,7 +61,7 @@
               name="email"
               autocomplete="email"
               required
-              maxlength="254"
+              maxlength="120"
               placeholder="tu@correo.com" /></label
           ><label
             >Contraseña<input
@@ -70,7 +70,7 @@
               autocomplete="current-password"
               required
               minlength="8"
-              maxlength="128"
+              maxlength="72"
               placeholder="Mínimo 8 caracteres" /></label
           ><button class="button button-primary button-wide" type="submit">
             Entrar al archivo <span>↗</span>
@@ -79,7 +79,7 @@
             Al entrar aceptas nuestros términos de uso y política de privacidad.
           </p>
         </form>
-        <form id="register-form" class="form-stack hidden">
+        <form id="register-form" class="form-stack hidden" method="post">
           <div>
             <p class="eyebrow">UNA COMUNIDAD DE HISTORIAS</p>
             <h2>Abre tu <em>archivo.</em></h2>
@@ -87,11 +87,11 @@
           <label
             >Nombre visible<input
               type="text"
-              name="name"
+              name="username"
               autocomplete="name"
               required
-              minlength="2"
-              maxlength="60"
+              minlength="3"
+              maxlength="50"
               placeholder="¿Cómo te llamamos?" /></label
           ><label
             >Correo electrónico<input
@@ -99,7 +99,7 @@
               name="email"
               autocomplete="email"
               required
-              maxlength="254"
+              maxlength="120"
               placeholder="tu@correo.com" /></label
           ><label
             >Contraseña<input
@@ -108,7 +108,7 @@
               autocomplete="new-password"
               required
               minlength="8"
-              maxlength="128"
+              maxlength="72"
               placeholder="Al menos 8 caracteres" /></label
           ><label
             >Confirmar contraseña<input
@@ -117,7 +117,7 @@
               autocomplete="new-password"
               required
               minlength="8"
-              maxlength="128"
+              maxlength="72"
               placeholder="Repite tu contraseña" /></label
           ><button class="button button-primary button-wide" type="submit">
             Crear cuenta <span>↗</span>

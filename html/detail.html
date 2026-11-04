@@ -29,7 +29,7 @@
       <div class="header-actions">
         <a class="button button-quiet" data-auth-link href="/html/login.html"
           >Iniciar sesión</a
-        ><a class="button button-primary" href="/html/login.html#registro"
+        ><a class="button button-primary" data-join-link href="/html/login.html#registro"
           >Únete a CMDB</a
         >
       </div>
@@ -51,31 +51,42 @@
           <div id="review-list" class="review-list">
             <div class="loading-state">Cargando reseñas…</div>
           </div>
-          <form id="review-form" class="review-form form-stack">
+          <form id="review-form" class="review-form form-stack" method="post">
             <p class="eyebrow">COMPARTE TU MIRADA</p>
             <h3>Escribe una <em>reseña.</em></h3>
             <label
+              >Título<input
+                name="title"
+                required
+                minlength="1"
+                maxlength="150"
+                placeholder="Resume tu opinión" /></label
+            ><label
               >Tu calificación<select name="rating" required>
                 <option value="">Selecciona una nota</option>
-                <option value="5">★★★★★ · Imprescindible</option>
-                <option value="4">★★★★☆ · Muy buena</option>
-                <option value="3">★★★☆☆ · Interesante</option>
-                <option value="2">★★☆☆☆ · No conecté</option>
-                <option value="1">★☆☆☆☆ · No la recomiendo</option>
+                <option value="10">10 · Imprescindible</option>
+                <option value="9">9 · Excelente</option>
+                <option value="8">8 · Muy buena</option>
+                <option value="7">7 · Buena</option>
+                <option value="6">6 · Interesante</option>
+                <option value="5">5 · Regular</option>
+                <option value="4">4 · Floja</option>
+                <option value="3">3 · Mala</option>
+                <option value="2">2 · Muy mala</option>
+                <option value="1">1 · No la recomiendo</option>
               </select></label
             ><label
               >Tu reseña<textarea
-                name="body"
+                name="comment"
                 required
                 minlength="20"
-                maxlength="2000"
+                maxlength="500"
                 rows="6"
                 placeholder="¿Qué te hizo sentir? ¿Qué debería saber otro espectador?"
               ></textarea>
             </label>
             <p class="form-footnote">
-              Las reseñas nuevas pasan por aprobación antes de aparecer
-              públicamente.
+              Las reseñas se publican al enviarlas.
             </p>
             <button class="button button-primary" type="submit">
               Enviar reseña <span>↗</span>
