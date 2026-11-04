@@ -11,7 +11,7 @@ La interfaz está hecha con HTML, CSS y JavaScript nativo, sin frameworks ni dep
 
 ## Documentación
 
-El video del proyecto y las historias de usuario están en la carpeta de Google Drive:
+El video del proyecto, planificacion scrum y las historias de usuario están en la carpeta de Google Drive:
 
 - [Video e historias de usuario](https://drive.google.com/drive/folders/1XRz8e7SL5ekA93ogKyMmZz5pfo3n3u0U?usp=sharing)
 
@@ -194,7 +194,3 @@ El backend limita las peticiones por IP. Al superar un límite responde `429`:
 - Cada IP puede hacer 300 peticiones cada 15 minutos.
 - `POST /auth/login`: 10 intentos fallidos cada 15 minutos. Los inicios de sesión correctos no cuentan.
 - `POST /auth/register`: 20 registros por hora.
-
-## Documentación de la API
-
-La documentación interactiva está en Swagger UI: `http://localhost:3000/api-docs`.
